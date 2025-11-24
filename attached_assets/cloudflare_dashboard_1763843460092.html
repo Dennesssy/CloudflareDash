@@ -1,0 +1,1494 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cloudflare Desktop Manager</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        /* Core Tokens - reused from Convex-style dashboard */
+        :root {
+            --background-primary: #1d1d1f;
+            --background-secondary: #2d2d2f;
+            --background-tertiary: #3d3d3f;
+            --text-primary: #f5f5f7;
+            --text-secondary: #aeaeb2;
+            --accent-blue: #0a84ff;
+            --accent-green: #30d158;
+            --accent-orange: #ff9f0a;
+            --accent-red: #ff453a;
+            --accent-purple: #bf5af2;
+            --divider-color: rgba(235,235,245,0.15);
+            --grid-gap: 16px;
+            --card-padding: 16px;
+            --radius: 10px;
+            --shadow-1: 0 10px 30px rgba(0,0,0,0.35);
+        }
+
+        /* Light theme overrides */
+        [data-theme="light"] {
+            --background-primary: #f5f5f7;
+            --background-secondary: #ffffff;
+            --background-tertiary: #f2f2f7;
+            --text-primary: #111113;
+            --text-secondary: #6c6c70;
+            --divider-color: rgba(0,0,0,0.12);
+        }
+
+        /* Compact density */
+        .dense {
+            --grid-gap: 10px;
+            --card-padding: 12px;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+            overflow: hidden;
+            font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", system-ui, Helvetica, Arial, sans-serif;
+            background: var(--background-primary);
+            color: var(--text-primary);
+        }
+
+        /* Top Bar */
+        .topbar {
+            height: 48px;
+            background: var(--background-secondary);
+            border-bottom: 1px solid var(--divider-color);
+            display: flex;
+            align-items: center;
+            padding: 0 12px;
+            gap: 8px;
+        }
+
+        .top-btn {
+            height: 28px;
+            background: var(--background-tertiary);
+            border: 1px solid var(--divider-color);
+            border-radius: 6px;
+            color: var(--text-primary);
+            padding: 0 10px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 11px;
+            transition: filter 0.2s, background 0.2s, color 0.2s, border-color 0.2s;
+        }
+
+        .top-btn:hover {
+            filter: brightness(1.06);
+        }
+
+        .top-btn.active {
+            background: var(--accent-blue);
+            color: #fff;
+            border-color: var(--accent-blue);
+        }
+
+        .status-indicator {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 11px;
+        }
+
+        .status-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: var(--accent-green);
+        }
+
+        .status-dot.warning { background: var(--accent-orange); }
+        .status-dot.error { background: var(--accent-red); }
+
+        /* Sidebar navigation (replaces top tab bar) */
+        .sidebar {
+            width: 220px;
+            background: var(--background-secondary);
+            border-right: 1px solid var(--divider-color);
+            padding: 10px 8px;
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
+
+        .sidebar-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 6px;
+        }
+
+        .sidebar-title {
+            font-size: 11px;
+            font-weight: 600;
+            color: var(--text-secondary);
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .sidebar-section-label {
+            font-size: 9px;
+            text-transform: uppercase;
+            letter-spacing: 0.06em;
+            color: var(--text-secondary);
+            margin: 4px 2px 2px;
+        }
+
+        .tab-item {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 6px 10px;
+            border-radius: 8px;
+            font-size: 11px;
+            color: var(--text-secondary);
+            cursor: pointer;
+            white-space: nowrap;
+            transition: all 0.2s;
+            border: 1px solid transparent;
+        }
+
+        .tab-item i {
+            font-size: 11px;
+        }
+
+        .tab-item:hover {
+            color: var(--text-primary);
+            background: rgba(255,255,255,0.06);
+        }
+
+        .tab-item.active {
+            color: var(--accent-blue);
+            background: rgba(10,132,255,0.14);
+            border-color: rgba(10,132,255,0.5);
+            font-weight: 600;
+        }
+
+        /* Main Content */
+        .main {
+            flex: 1;
+            overflow: auto;
+            padding: 16px;
+            display: block;
+        }
+
+        .subheading {
+            font-size: 10px;
+            color: var(--text-secondary);
+            margin-bottom: 8px;
+        }
+
+        .hint-link {
+            color: var(--accent-blue);
+            cursor: pointer;
+            font-size: 10px;
+            text-decoration: underline;
+        }
+
+        .tab-content {
+            display: none;
+            animation: fadeIn 0.2s ease-out;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+            gap: var(--grid-gap);
+        }
+
+        .card {
+            background: var(--background-secondary);
+            border: 1px solid var(--divider-color);
+            border-radius: var(--radius);
+            padding: var(--card-padding);
+            display: flex;
+            flex-direction: column;
+            min-height: 110px;
+            position: relative;
+            transition: transform 0.2s, box-shadow 0.2s, border-color 0.2s, background 0.2s;
+        }
+
+        .card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 15px 40px rgba(0,0,0,0.4);
+        }
+
+        .card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: baseline;
+            margin-bottom: 6px;
+            gap: 8px;
+        }
+
+        .card-title {
+            font-weight: 700;
+            font-size: 13px;
+        }
+
+        .pill {
+            background: rgba(10,132,255,0.16);
+            color: var(--accent-blue);
+            border-radius: 999px;
+            font-size: 9px;
+            font-weight: 700;
+            text-transform: uppercase;
+            padding: 2px 8px;
+        }
+
+        .pill.success { background: rgba(48,209,88,0.16); color: var(--accent-green); }
+        .pill.warning { background: rgba(255,159,10,0.16); color: var(--accent-orange); }
+        .pill.error { background: rgba(255,69,58,0.16); color: var(--accent-red); }
+
+        .card-desc {
+            color: var(--text-secondary);
+            font-size: 11px;
+            margin: 4px 0 8px;
+        }
+
+        .metric-value {
+            font-size: 20px;
+            font-weight: 700;
+            margin: 4px 0;
+        }
+
+        .metric-label {
+            color: var(--text-secondary);
+            font-size: 9px;
+            text-transform: uppercase;
+        }
+
+        .progress {
+            height: 4px;
+            border-radius: 999px;
+            background: var(--background-tertiary);
+            margin: 6px 0;
+            overflow: hidden;
+        }
+
+        .progress-bar {
+            height: 100%;
+            background: var(--accent-blue);
+            border-radius: 999px;
+            transition: width 0.3s ease;
+        }
+
+        .table-list {
+            list-style: none;
+            margin: 4px 0;
+        }
+
+        .table-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 4px 0;
+            border-bottom: 1px solid var(--divider-color);
+            font-size: 10px;
+        }
+
+        .table-item:last-child {
+            border-bottom: none;
+        }
+
+        .table-name { font-weight: 600; }
+        .table-count {
+            color: var(--text-secondary);
+            background: var(--background-tertiary);
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-size: 9px;
+        }
+
+        .mini-btn {
+            padding: 2px 6px;
+            border-radius: 4px;
+            border: 1px solid var(--divider-color);
+            font-size: 9px;
+            color: var(--text-secondary);
+            cursor: pointer;
+            background: transparent;
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            transition: all 0.2s;
+        }
+
+        .mini-btn:hover {
+            color: var(--accent-blue);
+            border-color: var(--accent-blue);
+        }
+
+        .badge {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            padding: 1px 6px;
+            border-radius: 999px;
+            font-size: 8px;
+            background: var(--background-tertiary);
+            color: var(--text-secondary);
+        }
+
+        .split {
+            display: grid;
+            grid-template-columns: 260px minmax(0, 1fr);
+            gap: 12px;
+        }
+
+        @media (max-width: 900px) {
+            .split { grid-template-columns: 1fr; }
+        }
+
+        @media (max-width: 768px) {
+            .main { padding: 10px; }
+        }
+
+        .list-pane {
+            background: var(--background-secondary);
+            border: 1px solid var(--divider-color);
+            border-radius: var(--radius);
+            padding: 10px;
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+            font-size: 10px;
+        }
+
+        .list-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 4px;
+            font-size: 10px;
+            font-weight: 600;
+        }
+
+        .list-item {
+            padding: 5px 6px;
+            border-radius: 6px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 6px;
+            cursor: pointer;
+            transition: all 0.15s;
+        }
+
+        .list-item:hover {
+            background: rgba(255,255,255,0.04);
+        }
+
+        .list-item.active {
+            background: rgba(10,132,255,0.18);
+            color: var(--accent-blue);
+            font-weight: 600;
+            border: 1px solid rgba(10,132,255,0.5);
+        }
+
+        .log-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 10px;
+            margin-top: 4px;
+        }
+
+        .log-table th,
+        .log-table td {
+            padding: 4px 6px;
+            border-bottom: 1px solid var(--divider-color);
+            text-align: left;
+            white-space: nowrap;
+        }
+
+        .log-status-success { color: var(--accent-green); font-weight: 600; }
+        .log-status-error { color: var(--accent-red); font-weight: 600; }
+
+        .sql-box {
+            background: var(--background-tertiary);
+            border: 1px solid var(--divider-color);
+            border-radius: 6px;
+            padding: 8px;
+            font-family: 'Monaco', 'Menlo', monospace;
+            font-size: 9px;
+            margin-top: 4px;
+            overflow-x: auto;
+            cursor: pointer;
+        }
+
+        .sql-comment { color: var(--text-secondary); font-style: italic; display: block; margin-bottom: 2px; }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(4px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        @keyframes slideIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .card {
+            animation: slideIn 0.25s ease-out forwards;
+        }
+    </style>
+</head>
+<body>
+    <!-- Top Bar -->
+    <div class="topbar">
+        <div class="top-btn active" id="themeToggle">
+            <i class="fas fa-moon"></i>
+            <span>Theme</span>
+        </div>
+        <div class="top-btn" id="densityToggle">
+            <i class="fas fa-compress"></i>
+            <span>Compact</span>
+        </div>
+        <div class="top-btn" id="refreshBtn">
+            <i class="fas fa-sync-alt"></i>
+            <span>Refresh</span>
+        </div>
+        <div style="flex:1;"></div>
+        <div class="status-indicator">
+            <div class="status-dot"></div>
+            <span>Cloudflare Connected - Account: 850716079086f57dd4249759acf80868</span>
+        </div>
+    </div>
+
+    <div style="display:flex; flex:1; min-height:0;">
+        <!-- Sidebar -->
+        <div class="sidebar" id="sidebar">
+            <div class="sidebar-header">
+                <span class="sidebar-title"><i class="fas fa-cloud"></i> Cloudflare</span>
+                <!-- Kept simple for now; no collapse logic to avoid locking navigation -->
+            </div>
+            <div class="sidebar-section-label">Views</div>
+            <div class="tab-item active" data-tab="overview"><i class="fas fa-gauge"></i><span>Overview</span></div>
+            <div class="tab-item" data-tab="workers"><i class="fas fa-code"></i><span>Workers</span></div>
+            <div class="tab-item" data-tab="pages"><i class="fas fa-layer-group"></i><span>Pages</span></div>
+            <div class="tab-item" data-tab="dns"><i class="fas fa-globe"></i><span>DNS</span></div>
+            <div class="tab-item" data-tab="kv-r2"><i class="fas fa-database"></i><span>KV / R2</span></div>
+            <div class="tab-item" data-tab="routes"><i class="fas fa-route"></i><span>Routes</span></div>
+            <div class="tab-item" data-tab="envs"><i class="fas fa-sliders-h"></i><span>Environments</span></div>
+            <div class="tab-item" data-tab="deployments"><i class="fas fa-rocket"></i><span>Deployments</span></div>
+            <div class="tab-item" data-tab="logs"><i class="fas fa-list"></i><span>Logs</span></div>
+            <div class="tab-item" data-tab="settings"><i class="fas fa-key"></i><span>Settings</span></div>
+        </div>
+
+        <!-- Main Content -->
+        <main class="main">
+        <!-- OVERVIEW TAB -->
+        <section class="tab-content active" data-tab="overview">
+            <div class="grid">
+                <div class="card">
+                    <div class="card-header">
+                        <div class="card-title">Account Overview</div>
+                        <div class="pill success">Healthy</div>
+                    </div>
+                    <div class="card-desc">High-level view of your Cloudflare footprint managed from this desktop UI.</div>
+                    <ul class="table-list">
+                        <li class="table-item">
+                            <span class="table-name">Zones</span>
+                            <span class="table-count">6</span>
+                        </li>
+                        <li class="table-item">
+                            <span class="table-name">Workers</span>
+                            <span class="table-count">12</span>
+                        </li>
+                        <li class="table-item">
+                            <span class="table-name">Pages Projects</span>
+                            <span class="table-count">4</span>
+                        </li>
+                    </ul>
+                </div>
+
+                <div class="card">
+                    <div class="card-header">
+                        <div class="card-title">Quick Actions</div>
+                        <div class="pill">Wrangler-style</div>
+                    </div>
+                    <div class="card-desc">
+                        Common operations mapped to single clicks; each mirrors a familiar wrangler flow.
+                    </div>
+                    <div style="display:flex; flex-wrap:wrap; gap:6px;">
+                        <button class="mini-btn" data-goto="workers"><i class="fas fa-bolt"></i>New Worker</button>
+                        <button class="mini-btn" data-goto="pages"><i class="fas fa-file-code"></i>New Pages Project</button>
+                        <button class="mini-btn" data-goto="envs"><i class="fas fa-sliders-h"></i>Configure Environments</button>
+                        <button class="mini-btn" data-goto="deployments"><i class="fas fa-cloud-upload-alt"></i>Deploy Now</button>
+                    </div>
+                    <div class="sql-box">
+                        <span class="sql-comment">// Equivalent wrangler commands (non-executable reference)</span>
+                        wrangler deploy --name my-worker --env production
+                    </div>
+                </div>
+
+                <div class="card">
+                    <div class="card-header">
+                        <div class="card-title">Data Connectivity</div>
+                        <div class="pill">Observability</div>
+                    </div>
+                    <div class="card-desc">
+                        High-level status of how this project connects to Cloudflare analytics and logs.
+                    </div>
+                    <ul class="table-list">
+                        <li class="table-item">
+                            <span class="table-name">GraphQL Analytics API</span>
+                            <span class="table-count">Ready · POST /client/v4/graphql</span>
+                        </li>
+                        <li class="table-item">
+                            <span class="table-name">Logpush</span>
+                            <span class="table-count">Jobs configurable → S3/R2/SIEM</span>
+                        </li>
+                        <li class="table-item">
+                            <span class="table-name">Instant Logs</span>
+                            <span class="table-count">Live tail for debugging</span>
+                        </li>
+                        <li class="table-item">
+                            <span class="table-name">Logs Engine / R2</span>
+                            <span class="table-count">Historical queries via R2</span>
+                        </li>
+                    </ul>
+                    <div style="margin-top:4px; display:flex; gap:6px; flex-wrap:wrap;">
+                        <button class="mini-btn" data-goto="logs"><i class="fas fa-chart-line"></i>View Analytics & Logs</button>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <div class="card-header">
+                        <div class="card-title">Recent Cloudflare Deployments</div>
+                        <div class="pill">Summary</div>
+                    </div>
+                    <div class="card-desc">Last few deployments across Workers & Pages.</div>
+                    <table class="log-table">
+                        <thead>
+                            <tr>
+                                <th>Service</th>
+                                <th>Env</th>
+                                <th>Status</th>
+                                <th>When</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td>api-worker</td>
+                                <td>prod</td>
+                                <td class="log-status-success">SUCCESS</td>
+                                <td>2 min ago</td>
+                            </tr>
+                            <tr>
+                                <td>landing-pages</td>
+                                <td>preview</td>
+                                <td class="log-status-success">SUCCESS</td>
+                                <td>15 min ago</td>
+                            </tr>
+                            <tr>
+                                <td>edge-auth</td>
+                                <td>prod</td>
+                                <td class="log-status-error">FAILED</td>
+                                <td>1 hour ago</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <div class="card">
+                    <div class="card-header">
+                        <div class="card-title">Deployment Profiles</div>
+                        <div class="pill">Template</div>
+                    </div>
+                    <div class="card-desc">
+                        Define once, reuse across Workers & Pages instead of hand-editing wrangler.toml.
+                    </div>
+                    <ul class="table-list">
+                        <li class="table-item">
+                            <span class="table-name">Production</span>
+                            <span class="table-count">account A • env vars: secure</span>
+                        </li>
+                        <li class="table-item">
+                            <span class="table-name">Staging</span>
+                            <span class="table-count">separate KV, R2 buckets</span>
+                        </li>
+                        <li class="table-item">
+                            <span class="table-name">Dev</span>
+                            <span class="table-count">auto-preview on PR</span>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+        </section>
+
+        <!-- WORKERS TAB -->
+        <section class="tab-content" data-tab="workers">
+            <div class="subheading">
+                Mirrors: <code>wrangler deploy</code>, <code>wrangler dev</code>, <code>wrangler tail</code>. All workers visible; no steps locked.
+            </div>
+            <div class="split">
+                <div class="list-pane">
+                    <div class="list-header">
+                        <span>Workers</span>
+                        <button class="mini-btn"><i class="fas fa-plus"></i>New Worker</button>
+                    </div>
+                    <div class="list-item active" data-worker="api-worker">
+                        <span>api-worker</span>
+                        <span class="badge">prod</span>
+                    </div>
+                    <div class="list-item" data-worker="edge-auth">
+                        <span>edge-auth</span>
+                        <span class="badge">prod</span>
+                    </div>
+                    <div class="list-item" data-worker="assets-cdn">
+                        <span>assets-cdn</span>
+                        <span class="badge">staging</span>
+                    </div>
+                    <div class="list-item" data-worker="feature-x">
+                        <span>feature-x</span>
+                        <span class="badge">preview</span>
+                    </div>
+                </div>
+                <div class="detail-pane">
+                    <div class="card" id="workerDetailCard">
+                        <div class="card-header">
+                            <div class="card-title">Worker: api-worker</div>
+                            <div class="pill success">Ready</div>
+                        </div>
+                        <div class="card-desc">
+                            Central API edge worker. Managed entirely from this UI instead of running wrangler manually.
+                        </div>
+                        <ul class="table-list">
+                            <li class="table-item">
+                                <span class="table-name">Entry file</span>
+                                <span class="table-count">src/api-worker.ts</span>
+                            </li>
+                            <li class="table-item">
+                                <span class="table-name">Routes</span>
+                                <span class="table-count">api.example.com/*</span>
+                            </li>
+                            <li class="table-item">
+                                <span class="table-name">Bindings</span>
+                                <span class="table-count">KV: api_kv • R2: assets • D1: users_db</span>
+                            </li>
+                        </ul>
+                        <div style="margin-top:6px; display:flex; gap:6px; flex-wrap:wrap;">
+                            <button class="mini-btn"><i class="fas fa-cloud-upload-alt"></i>Deploy (Prod)</button>
+                            <button class="mini-btn"><i class="fas fa-vial"></i>Deploy Preview</button>
+                            <button class="mini-btn"><i class="fas fa-eye"></i>Open Preview</button>
+                            <button class="mini-btn"><i class="fas fa-gear"></i>Edit Env Vars</button>
+                            <button class="mini-btn"><i class="fas fa-list"></i>View Logs</button>
+                        </div>
+                        <div class="sql-box">
+                            <span class="sql-comment">// Equivalent CLI that this button would run</span>
+                            wrangler deploy --name api-worker --env production
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- PAGES TAB -->
+        <section class="tab-content" data-tab="pages">
+            <div class="subheading">
+                Mirrors: <code>wrangler pages project</code> & <code>wrangler pages deploy</code>.
+            </div>
+            <div class="split">
+                <div class="list-pane">
+                    <div class="list-header">
+                        <span>Pages Projects</span>
+                        <button class="mini-btn"><i class="fas fa-plus"></i>New Pages Project</button>
+                    </div>
+                    <div class="list-item active" data-pages="marketing-site">
+                        <span>marketing-site</span>
+                        <span class="badge">Git</span>
+                    </div>
+                    <div class="list-item" data-pages="docs-site">
+                        <span>docs-site</span>
+                        <span class="badge">Git</span>
+                    </div>
+                    <div class="list-item" data-pages="admin-ui">
+                        <span>admin-ui</span>
+                        <span class="badge">Manual</span>
+                    </div>
+                </div>
+                <div class="detail-pane">
+                    <div class="card">
+                        <div class="card-header">
+                            <div class="card-title">Pages: marketing-site</div>
+                            <div class="pill success">Connected</div>
+                        </div>
+                        <div class="card-desc">
+                            Deployed from GitHub (main branch). Use the buttons below instead of wrangler pages commands.
+                        </div>
+                        <ul class="table-list">
+                            <li class="table-item">
+                                <span class="table-name">Framework</span>
+                                <span class="table-count">Next.js</span>
+                            </li>
+                            <li class="table-item">
+                                <span class="table-name">Preview URL</span>
+                                <span class="table-count">https://marketing-preview.pages.dev</span>
+                            </li>
+                            <li class="table-item">
+                                <span class="table-name">Production URL</span>
+                                <span class="table-count">https://example.com</span>
+                            </li>
+                        </ul>
+                        <div style="margin-top:6px; display:flex; gap:6px; flex-wrap:wrap;">
+                            <button class="mini-btn"><i class="fas fa-cloud-upload-alt"></i>Trigger Deploy</button>
+                            <button class="mini-btn"><i class="fas fa-eye"></i>View Preview</button>
+                            <button class="mini-btn"><i class="fas fa-sliders-h"></i>Env Vars</button>
+                            <button class="mini-btn"><i class="fas fa-route"></i>Routes</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- DNS TAB -->
+        <section class="tab-content" data-tab="dns">
+            <div class="subheading">
+                Use this instead of editing DNS separately; conceptually feeds your wrangler route config.
+            </div>
+            <div class="card">
+                <div class="card-header">
+                    <div class="card-title">DNS Records (example.com)</div>
+                    <button class="mini-btn"><i class="fas fa-plus"></i>Add Record</button>
+                </div>
+                <div class="card-desc">Minimal DNS controls needed to support Workers/Pages without opening Cloudflare dashboard.</div>
+                <table class="log-table">
+                    <thead>
+                        <tr>
+                            <th>Type</th>
+                            <th>Name</th>
+                            <th>Content</th>
+                            <th>Proxy</th>
+                            <th>TTL</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>A</td>
+                            <td>@</td>
+                            <td>198.51.100.10</td>
+                            <td><span class="badge">Proxied</span></td>
+                            <td>Auto</td>
+                            <td>
+                                <button class="mini-btn">Edit</button>
+                                <button class="mini-btn">Delete</button>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td>CNAME</td>
+                            <td>www</td>
+                            <td>example.pages.dev</td>
+                            <td><span class="badge">Proxied</span></td>
+                            <td>Auto</td>
+                            <td>
+                                <button class="mini-btn">Edit</button>
+                                <button class="mini-btn">Delete</button>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </section>
+
+        <!-- KV / R2 TAB -->
+        <section class="tab-content" data-tab="kv-r2">
+            <div class="subheading">
+                Mirrors: <code>[[kv_namespaces]]</code>, <code>[[r2_buckets]]</code> sections in wrangler.toml.
+            </div>
+            <div class="grid">
+                <div class="card">
+                    <div class="card-header">
+                        <div class="card-title">KV Namespaces</div>
+                        <button class="mini-btn"><i class="fas fa-plus"></i>New Namespace</button>
+                    </div>
+                    <ul class="table-list">
+                        <li class="table-item">
+                            <span class="table-name">api_cache</span>
+                            <span class="table-count">Bound to api-worker</span>
+                        </li>
+                        <li class="table-item">
+                            <span class="table-name">sessions</span>
+                            <span class="table-count">Bound to edge-auth</span>
+                        </li>
+                    </ul>
+                    <div style="margin-top:6px; display:flex; gap:6px; flex-wrap:wrap;">
+                        <button class="mini-btn">Browse Keys</button>
+                        <button class="mini-btn">Bind to Worker</button>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <div class="card-header">
+                        <div class="card-title">R2 Buckets</div>
+                        <button class="mini-btn"><i class="fas fa-plus"></i>New Bucket</button>
+                    </div>
+                    <ul class="table-list">
+                        <li class="table-item">
+                            <span class="table-name">assets</span>
+                            <span class="table-count">Bound to assets-cdn</span>
+                        </li>
+                    </ul>
+                    <div style="margin-top:6px; display:flex; gap:6px; flex-wrap:wrap;">
+                        <button class="mini-btn">Upload</button>
+                        <button class="mini-btn">Browse</button>
+                        <button class="mini-btn">Public URL</button>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- ROUTES TAB -->
+        <section class="tab-content" data-tab="routes">
+            <div class="subheading">
+                Mirrors: <code>route</code> / <code>routes</code> in wrangler.toml, linked to Workers.
+            </div>
+            <div class="card">
+                <div class="card-header">
+                    <div class="card-title">Routes</div>
+                    <button class="mini-btn"><i class="fas fa-plus"></i>Add Route</button>
+                </div>
+                <div class="card-desc">Map URL patterns to Workers without editing wrangler.toml manually.</div>
+                <table class="log-table">
+                    <thead>
+                        <tr>
+                            <th>Pattern</th>
+                            <th>Service</th>
+                            <th>Env</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>api.example.com/*</td>
+                            <td>api-worker</td>
+                            <td>prod</td>
+                            <td>
+                                <button class="mini-btn">Edit</button>
+                                <button class="mini-btn">Detach</button>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td>auth.example.com/*</td>
+                            <td>edge-auth</td>
+                            <td>prod</td>
+                            <td>
+                                <button class="mini-btn">Edit</button>
+                                <button class="mini-btn">Detach</button>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </section>
+
+        <!-- ENVIRONMENTS TAB -->
+        <section class="tab-content" data-tab="envs">
+            <div class="subheading">
+                Represents your wrangler.toml env blocks (ACCOUNT_ID, vars); used across Workers & Pages.
+            </div>
+            <div class="grid">
+                <div class="card">
+                    <div class="card-header">
+                        <div class="card-title">Production</div>
+                        <div class="pill success">Primary</div>
+                    </div>
+                    <div class="card-desc">Canonical environment. One-click deploy buttons target this profile.</div>
+                    <ul class="table-list">
+                        <li class="table-item">
+                            <span class="table-name">ACCOUNT_ID</span>
+                            <span class="table-count">***</span>
+                        </li>
+                        <li class="table-item">
+                            <span class="table-name">API_BASE_URL</span>
+                            <span class="table-count">https://api.example.com</span>
+                        </li>
+                    </ul>
+                </div>
+
+                <div class="card">
+                    <div class="card-header">
+                        <div class="card-title">Staging</div>
+                        <div class="pill">Safe</div>
+                    </div>
+                    <div class="card-desc">Used for QA and pre-production testing.</div>
+                    <ul class="table-list">
+                        <li class="table-item">
+                            <span class="table-name">API_BASE_URL</span>
+                            <span class="table-count">https://staging-api.example.com</span>
+                        </li>
+                    </ul>
+                    <button class="mini-btn" style="margin-top:4px;">Sync from Production</button>
+                </div>
+
+                <div class="card">
+                    <div class="card-header">
+                        <div class="card-title">Dev / Preview</div>
+                        <div class="pill warning">Dynamic</div>
+                    </div>
+                    <div class="card-desc">Auto-created for feature branches and PRs.</div>
+                    <ul class="table-list">
+                        <li class="table-item">
+                            <span class="table-name">Pattern</span>
+                            <span class="table-count">*.preview.example.com</span>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+        </section>
+
+        <!-- DEPLOYMENTS TAB -->
+        <section class="tab-content" data-tab="deployments">
+            <div class="subheading">
+                Visual history of what <code>wrangler deploy</code> has produced across environments.
+            </div>
+            <div class="grid">
+                <div class="card">
+                    <div class="card-header">
+                        <div class="card-title">Worker Deployments</div>
+                    </div>
+                    <div class="card-desc">History for api-worker (mocked).</div>
+                    <table class="log-table">
+                        <thead>
+                            <tr>
+                                <th>Status</th>
+                                <th>Version</th>
+                                <th>When</th>
+                                <th>Env</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td>✅</td>
+                                <td>build-120</td>
+                                <td>2 min ago</td>
+                                <td>prod</td>
+                                <td>
+                                    <button class="mini-btn">Rollback</button>
+                                    <button class="mini-btn">Open</button>
+                                </td>
+                            </tr>
+                            <tr>
+                                <td>✅</td>
+                                <td>build-119</td>
+                                <td>1 hour ago</td>
+                                <td>prod</td>
+                                <td>
+                                    <button class="mini-btn">Rollback</button>
+                                    <button class="mini-btn">Open</button>
+                                </td>
+                            </tr>
+                            <tr>
+                                <td>❌</td>
+                                <td>build-118</td>
+                                <td>2 hours ago</td>
+                                <td>prod</td>
+                                <td>
+                                    <button class="mini-btn">View Logs</button>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <div class="card">
+                    <div class="card-header">
+                        <div class="card-title">Preview Links</div>
+                        <div class="pill">Review</div>
+                    </div>
+                    <div class="card-desc">Treat previews like first-class deployments.</div>
+                    <ul class="table-list">
+                        <li class="table-item">
+                            <span class="table-name">feature-x</span>
+                            <span class="table-count">https://feature-x.preview.example.workers.dev</span>
+                        </li>
+                        <li class="table-item">
+                            <span class="table-name">docs-update</span>
+                            <span class="table-count">https://docs-update.pages.dev</span>
+                        </li>
+                    </ul>
+                    <div style="margin-top:6px; display:flex; gap:6px; flex-wrap:wrap;">
+                        <button class="mini-btn">Open Preview</button>
+                        <button class="mini-btn">Mark Approved</button>
+                        <button class="mini-btn">Promote to Prod</button>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- LOGS TAB -->
+        <section class="tab-content" data-tab="logs">
+            <div class="subheading">
+                Centralizes Cloudflare log/analytics options: Instant Logs, Logpush, Logs Engine, GraphQL Analytics.
+            </div>
+            <div class="card">
+            <!-- Live / Instant Logs style -->
+            <div class="card">
+                <div class="card-header">
+                    <div class="card-title">Live Logs (Instant Logs / wrangler tail)</div>
+                    <div>
+                        <button class="mini-btn"><i class="fas fa-play"></i>Start Tail</button>
+                        <button class="mini-btn"><i class="fas fa-stop"></i>Stop</button>
+                    </div>
+                </div>
+                <div class="card-desc">
+                    Use this panel like <code>wrangler tail</code> or Instant Logs: ad-hoc, no storage.
+                </div>
+                <table class="log-table">
+                    <thead>
+                        <tr>
+                            <th>Time</th>
+                            <th>Service</th>
+                            <th>Env</th>
+                            <th>Status</th>
+                            <th>Message</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>11:40:12</td>
+                            <td>api-worker</td>
+                            <td>prod</td>
+                            <td class="log-status-success">200</td>
+                            <td>GET /v1/users</td>
+                        </tr>
+                        <tr>
+                            <td>11:39:02</td>
+                            <td>edge-auth</td>
+                            <td>prod</td>
+                            <td class="log-status-error">401</td>
+                            <td>Invalid token</td>
+                        </tr>
+                        <tr>
+                            <td>11:38:10</td>
+                            <td>marketing-site</td>
+                            <td>preview</td>
+                            <td class="log-status-success">200</td>
+                            <td>Build succeeded</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- Logpush / Logs Engine summary -->
+            <div class="card">
+                <div class="card-header">
+                    <div class="card-title">Logpush & Logs Engine</div>
+                    <div class="pill">Pipelines</div>
+                </div>
+                <div class="card-desc">
+                    Describe and manage how raw logs are pushed to external storage and queried historically.
+                </div>
+                <ul class="table-list">
+                    <li class="table-item">
+                        <span class="table-name">Logpush Jobs</span>
+                        <span class="table-count">Configure jobs → S3 / R2 / SIEM</span>
+                    </li>
+                    <li class="table-item">
+                        <span class="table-name">R2 Retrieval / Logs Engine</span>
+                        <span class="table-count">Query pushed logs over time</span>
+                    </li>
+                </ul>
+            </div>
+
+            <!-- GraphQL Analytics API -->
+            <div class="card">
+                <div class="card-header">
+                    <div class="card-title">GraphQL Analytics API</div>
+                    <div class="pill">Metrics</div>
+                </div>
+                <div class="card-desc">
+                    Use GraphQL for aggregated analytics (traffic, security, Workers metrics).
+                </div>
+                <div class="sql-box">
+                    <span class="sql-comment">// Endpoint</span>
+                    POST https://api.cloudflare.com/client/v4/graphql
+
+                    <span class="sql-comment">// Example payload (simplified)</span>
+                    {
+                      "query": "query { viewer { zones { httpRequests1mGroups(limit: 5) { sum { requests } } } } }"
+                    }
+                </div>
+            </div>
+        </section>
+
+        <!-- SETTINGS TAB -->
+        <section class="tab-content" data-tab="settings">
+            <div class="subheading">
+                Backend-only configuration for Cloudflare credentials and defaults. Secrets are never exposed in this UI.
+            </div>
+            <div class="grid">
+                <!-- API Keys & Auth -->
+                <div class="card">
+                    <div class="card-header">
+                        <div class="card-title">API Keys & Auth</div>
+                        <div id="cfTokenStatusPill" class="pill success">Active</div>
+                    </div>
+                    <div class="card-desc">
+                        Manage how this dashboard talks to Cloudflare. Tokens are stored and used by your backend only.
+                    </div>
+                    <ul class="table-list">
+                        <li class="table-item">
+                            <span class="table-name">Cloudflare API Token</span>
+                            <span id="cfTokenStatusText" class="table-count">Valid until Jan 31, 2026</span>
+                        </li>
+                        <li class="table-item">
+                            <span class="table-name">Account ID</span>
+                            <span class="table-count">850716079086f57dd4249759acf80868</span>
+                        </li>
+                        <li class="table-item">
+                            <span class="table-name">Permissions</span>
+                            <span class="table-count">Full Access: AI, Workers, DNS, Security, Analytics, Pages, Zero Trust</span>
+                        </li>
+                        <li class="table-item">
+                            <span class="table-name">Zone Access</span>
+                            <span class="table-count">All Zones (Read/Edit)</span>
+                        </li>
+                    </ul>
+                    <div style="margin-top:6px; display:flex; gap:6px; flex-wrap:wrap;">
+                        <button class="mini-btn" id="rotateApiKeyBtn"><i class="fas fa-sync-alt"></i>Rotate API Token</button>
+                        <button class="mini-btn" id="clearApiKeyBtn"><i class="fas fa-ban"></i>Clear Token</button>
+                    </div>
+                    <div class="sql-box" id="apiKeyInputBox" style="display:none; margin-top:6px;">
+                        <span class="sql-comment">// Enter new Cloudflare API token (sent once to your backend, not stored in this page)</span>
+                        <input id="apiKeyInput" type="password" placeholder="cf_api_***" style="width:100%; padding:4px 6px; border-radius:4px; border:none; outline:none; background:transparent; color:var(--text-primary); font-size:9px;">
+                        <div style="margin-top:4px; display:flex; gap:6px; flex-wrap:wrap;">
+                            <button class="mini-btn" id="saveApiKeyBtn"><i class="fas fa-check"></i>Save</button>
+                            <button class="mini-btn" id="cancelApiKeyBtn"><i class="fas fa-times"></i>Cancel</button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Wrangler-style Defaults -->
+                <div class="card">
+                    <div class="card-header">
+                        <div class="card-title">Wrangler Profiles & Defaults</div>
+                    </div>
+                    <div class="card-desc">
+                        Non-secret defaults that other views use when calling your backend.
+                    </div>
+                    <ul class="table-list">
+                        <li class="table-item">
+                            <span class="table-name">Default Environment</span>
+                            <span id="defaultEnvText" class="table-count">-</span>
+                        </li>
+                    </ul>
+                    <div class="sql-box">
+                        <span class="sql-comment">// Backend usage (example, not executed in browser)</span>
+                        POST /api/settings/account {"accountId":"...","defaultEnv":"production"}
+                    </div>
+                </div>
+
+                <!-- Audit & Access (metadata only) -->
+                <div class="card">
+                    <div class="card-header">
+                        <div class="card-title">Audit Trail</div>
+                    </div>
+                    <div class="card-desc">
+                        Simple metadata so you know who last wired Cloudflare into this dashboard.
+                    </div>
+                    <ul class="table-list">
+                        <li class="table-item">
+                            <span class="table-name">Last Changed By</span>
+                            <span id="cfLastUpdatedByText" class="table-count">-</span>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <script>
+        const html = document.documentElement;
+
+        // Theme Toggle
+        const themeToggle = document.getElementById('themeToggle');
+        themeToggle.addEventListener('click', () => {
+            const current = html.getAttribute('data-theme') || 'dark';
+            const next = current === 'light' ? 'dark' : 'light';
+            html.setAttribute('data-theme', next);
+            const icon = themeToggle.querySelector('i');
+            icon.className = next === 'light' ? 'fas fa-sun' : 'fas fa-moon';
+            localStorage.setItem('cf_theme', next);
+        });
+
+        // Load saved theme
+        const savedTheme = localStorage.getItem('cf_theme') || 'dark';
+        html.setAttribute('data-theme', savedTheme);
+        themeToggle.querySelector('i').className = savedTheme === 'light' ? 'fas fa-sun' : 'fas fa-moon';
+
+        // Density Toggle
+        const densityToggle = document.getElementById('densityToggle');
+        let isCompact = false;
+        densityToggle.addEventListener('click', () => {
+            isCompact = !isCompact;
+            document.body.classList.toggle('dense', isCompact);
+            densityToggle.classList.toggle('active', isCompact);
+            const icon = densityToggle.querySelector('i');
+            icon.className = isCompact ? 'fas fa-expand' : 'fas fa-compress';
+        });
+
+        // Tab Switching
+        const tabItems = document.querySelectorAll('.tab-item');
+        const tabContents = document.querySelectorAll('.tab-content');
+        tabItems.forEach(tab => {
+            tab.addEventListener('click', () => {
+                const t = tab.getAttribute('data-tab');
+                tabItems.forEach(x => x.classList.remove('active'));
+                tab.classList.add('active');
+                tabContents.forEach(c => {
+                    c.classList.toggle('active', c.getAttribute('data-tab') === t);
+                });
+            });
+        });
+
+        // Simple JSON helper for live backend integration (used by Settings and others)
+        async function fetchJson(path, options = {}) {
+            const res = await fetch(path, {
+                headers: { 'Accept': 'application/json', ...(options.headers || {}) },
+                ...options,
+            });
+            if (!res.ok) {
+                throw new Error(`Request failed: ${res.status}`);
+            }
+            return res.json();
+        }
+
+        // Refresh: simulate minor metric jitter
+        const refreshBtn = document.getElementById('refreshBtn');
+        refreshBtn.addEventListener('click', () => {
+            const icon = refreshBtn.querySelector('i');
+            icon.style.animation = 'spin 0.7s linear';
+            setTimeout(() => { icon.style.animation = ''; }, 700);
+        });
+
+        // Inject spin keyframes
+        const spinStyle = document.createElement('style');
+        spinStyle.textContent = `
+            @keyframes spin {
+                from { transform: rotate(0deg); }
+                to { transform: rotate(360deg); }
+            }
+        `;
+        document.head.appendChild(spinStyle);
+
+        // Workers list: simple selection behavior
+        const workerConfigs = {
+            "api-worker": {
+                status: "Ready",
+                desc: "Central API edge worker. Managed entirely from this UI instead of running wrangler manually.",
+                route: "api.example.com/*",
+                bindings: "KV: api_kv • R2: assets • D1: users_db",
+                cli: "wrangler deploy --name api-worker --env production",
+            },
+            "edge-auth": {
+                status: "Ready",
+                desc: "Authentication and session validation at the edge.",
+                route: "auth.example.com/*",
+                bindings: "KV: sessions",
+                cli: "wrangler deploy --name edge-auth --env production",
+            },
+            "assets-cdn": {
+                status: "Ready",
+                desc: "Static asset caching using R2 and Workers.",
+                route: "static.example.com/*",
+                bindings: "R2: assets",
+                cli: "wrangler deploy --name assets-cdn --env staging",
+            },
+            "feature-x": {
+                status: "Preview",
+                desc: "Experimental feature deployed as preview.",
+                route: "feature-x.preview.example.workers.dev/*",
+                bindings: "KV: feature_x",
+                cli: "wrangler deploy --name feature-x --env preview",
+            }
+        };
+
+        const workerDetailCard = document.getElementById('workerDetailCard');
+        document.querySelectorAll('.list-item[data-worker]').forEach(item => {
+            item.addEventListener('click', () => {
+                document.querySelectorAll('.list-item[data-worker]').forEach(i => i.classList.remove('active'));
+                item.classList.add('active');
+                const key = item.getAttribute('data-worker');
+                const cfg = workerConfigs[key];
+                if (!cfg) return;
+                workerDetailCard.querySelector('.card-title').textContent = "Worker: " + key;
+                workerDetailCard.querySelector('.card-desc').textContent = cfg.desc;
+                const rows = workerDetailCard.querySelectorAll('.table-item');
+                rows[1].querySelector('.table-count').textContent = cfg.route;
+                rows[2].querySelector('.table-count').textContent = cfg.bindings;
+                workerDetailCard.querySelector('.sql-box').innerHTML =
+                    '<span class="sql-comment">// Equivalent CLI that this button would run</span>' +
+                    cfg.cli;
+            });
+        });
+
+        // SQL/CLI box copy
+        document.querySelectorAll('.sql-box').forEach(box => {
+            box.addEventListener('click', () => {
+                const text = box.textContent;
+                if (!navigator.clipboard) return;
+                navigator.clipboard.writeText(text).then(() => {
+                    const original = box.style.background;
+                    box.style.background = 'rgba(48,209,88,0.25)';
+                    setTimeout(() => {
+                        box.style.background = original || 'var(--background-tertiary)';
+                    }, 200);
+                });
+            });
+        });
+
+        // Subtle status pulse
+        setInterval(() => {
+            document.querySelectorAll('.status-dot').forEach(dot => {
+                if (Math.random() > 0.9) {
+                    dot.classList.add('warning');
+                    setTimeout(() => dot.classList.remove('warning'), 1500);
+                }
+            });
+        }, 8000);
+
+        // Quick action navigation and hint links
+        document.querySelectorAll('[data-goto]').forEach(btn => {
+            btn.addEventListener('click', () => {
+                const tab = btn.getAttribute('data-goto');
+                const target = document.querySelector(`.tab-item[data-tab="${tab}"]`);
+                if (!target) return;
+                target.click();
+            });
+        });
+
+        // Keyboard shortcuts
+        document.addEventListener('keydown', (e) => {
+            if (e.ctrlKey || e.metaKey) {
+                if (e.key === 't') {
+                    e.preventDefault();
+                    themeToggle.click();
+                }
+                if (e.key === 'd') {
+                    e.preventDefault();
+                    densityToggle.click();
+                }
+                if (e.key === 'r') {
+                    e.preventDefault();
+                    refreshBtn.click();
+                }
+            }
+        });
+
+        // SETTINGS TAB: API key management (frontend-only wiring; secrets stay backend-side)
+        async function loadSettingsView() {
+            const pill = document.getElementById('cfTokenStatusPill');
+            const tokenText = document.getElementById('cfTokenStatusText');
+            const accountText = document.getElementById('cfAccountStatusText');
+            const lastUpdatedText = document.getElementById('cfLastUpdatedText');
+            const lastUpdatedByText = document.getElementById('cfLastUpdatedByText');
+            const defaultEnvText = document.getElementById('defaultEnvText');
+
+            if (!pill || !tokenText) return;
+
+            try {
+                const s = await fetchJson('/api/settings');
+                const tokenConfigured = !!s.cloudflareTokenConfigured;
+                const accountConfigured = !!s.accountIdConfigured || !!s.zonesConfigured;
+
+                pill.textContent = tokenConfigured ? 'Configured' : 'Missing';
+                pill.classList.remove('error', 'warning');
+                pill.classList.add(tokenConfigured ? 'success' : 'error');
+
+                tokenText.textContent = tokenConfigured ? 'Configured (masked)' : 'Not configured';
+                accountText.textContent = accountConfigured ? 'Linked' : 'Not linked';
+                lastUpdatedText.textContent = s.lastUpdatedAt || '-';
+                lastUpdatedByText.textContent = s.lastUpdatedBy || '-';
+                defaultEnvText.textContent = s.defaultEnv || '-';
+            } catch (e) {
+                pill.textContent = 'Error';
+                pill.classList.remove('success');
+                pill.classList.add('error');
+                tokenText.textContent = 'Failed to load /api/settings';
+            }
+        }
+
+        const rotateApiKeyBtn = document.getElementById('rotateApiKeyBtn');
+        const clearApiKeyBtn = document.getElementById('clearApiKeyBtn');
+        const apiKeyInputBox = document.getElementById('apiKeyInputBox');
+        const apiKeyInput = document.getElementById('apiKeyInput');
+        const saveApiKeyBtn = document.getElementById('saveApiKeyBtn');
+        const cancelApiKeyBtn = document.getElementById('cancelApiKeyBtn');
+
+        if (rotateApiKeyBtn && apiKeyInputBox) {
+            rotateApiKeyBtn.addEventListener('click', () => {
+                apiKeyInputBox.style.display = 'block';
+                apiKeyInput && apiKeyInput.focus();
+            });
+        }
+
+        if (cancelApiKeyBtn && apiKeyInputBox) {
+            cancelApiKeyBtn.addEventListener('click', () => {
+                apiKeyInputBox.style.display = 'none';
+                if (apiKeyInput) apiKeyInput.value = '';
+            });
+        }
+
+        if (saveApiKeyBtn && apiKeyInput) {
+            saveApiKeyBtn.addEventListener('click', async () => {
+                const token = apiKeyInput.value.trim();
+                if (!token) return;
+                try {
+                    await fetchJson('/api/settings/api-key', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ token }),
+                    });
+                    apiKeyInput.value = '';
+                    apiKeyInputBox.style.display = 'none';
+                    loadSettingsView();
+                } catch (e) {
+                    alert('Failed to save API token. Ensure backend /api/settings/api-key is implemented.');
+                }
+            });
+        }
+
+        if (clearApiKeyBtn) {
+            clearApiKeyBtn.addEventListener('click', async () => {
+                if (!confirm('Clear stored Cloudflare API token? This will disable live operations until reconfigured.')) return;
+                try {
+                    await fetchJson('/api/settings/api-key', { method: 'DELETE' });
+                    loadSettingsView();
+                } catch (e) {
+                    alert('Failed to clear API token. Ensure backend DELETE /api/settings/api-key is implemented.');
+                }
+            });
+        }
+
+        // Auto-load settings when Settings tab is first opened
+        const settingsTabItem = document.querySelector('.tab-item[data-tab="settings"]');
+        if (settingsTabItem) {
+            let settingsLoaded = false;
+            settingsTabItem.addEventListener('click', () => {
+                if (!settingsLoaded) {
+                    settingsLoaded = true;
+                    loadSettingsView();
+                }
+            });
+        }
+    </script>
+</body>
+</html>
