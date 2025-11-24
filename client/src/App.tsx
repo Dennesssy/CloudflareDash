@@ -10,6 +10,14 @@ import { ThemeToggle } from "@/components/ThemeToggle";
 import Dashboard from "@/pages/Dashboard";
 import DNSManagement from "@/pages/DNSManagement";
 import Analytics from "@/pages/Analytics";
+import Workers from "@/pages/Workers";
+import Pages from "@/pages/Pages";
+import KV from "@/pages/KV";
+import D1 from "@/pages/D1";
+import DurableObjects from "@/pages/DurableObjects";
+import Deployments from "@/pages/Deployments";
+import EnvironmentVariables from "@/pages/EnvironmentVariables";
+import Settings from "@/pages/Settings";
 import NotFound from "@/pages/not-found";
 
 function Router() {
@@ -18,6 +26,14 @@ function Router() {
       <Route path="/" component={Dashboard} />
       <Route path="/dns" component={DNSManagement} />
       <Route path="/analytics" component={Analytics} />
+      <Route path="/workers" component={Workers} />
+      <Route path="/pages" component={Pages} />
+      <Route path="/kv" component={KV} />
+      <Route path="/d1" component={D1} />
+      <Route path="/durable-objects" component={DurableObjects} />
+      <Route path="/deployments" component={Deployments} />
+      <Route path="/env-vars" component={EnvironmentVariables} />
+      <Route path="/settings" component={Settings} />
       <Route component={NotFound} />
     </Switch>
   );
