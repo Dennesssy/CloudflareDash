@@ -17,6 +17,10 @@ import D1 from "@/pages/D1";
 import DurableObjects from "@/pages/DurableObjects";
 import Deployments from "@/pages/Deployments";
 import EnvironmentVariables from "@/pages/EnvironmentVariables";
+import AccessApplications from "@/pages/AccessApplications";
+import AccessPolicies from "@/pages/AccessPolicies";
+import ServiceCredentials from "@/pages/ServiceCredentials";
+import AccessSettings from "@/pages/AccessSettings";
 import Settings from "@/pages/Settings";
 import NotFound from "@/pages/not-found";
 
@@ -33,6 +37,10 @@ function Router() {
       <Route path="/durable-objects" component={DurableObjects} />
       <Route path="/deployments" component={Deployments} />
       <Route path="/env-vars" component={EnvironmentVariables} />
+      <Route path="/access-applications" component={AccessApplications} />
+      <Route path="/access-policies" component={AccessPolicies} />
+      <Route path="/service-credentials" component={ServiceCredentials} />
+      <Route path="/access-settings" component={AccessSettings} />
       <Route path="/settings" component={Settings} />
       <Route component={NotFound} />
     </Switch>

@@ -1,4 +1,4 @@
-import { LayoutDashboard, Globe, Shield, BarChart3, Settings, Code2, Zap, Database, Box, FileText, GitBranch } from "lucide-react";
+import { LayoutDashboard, Globe, Shield, BarChart3, Settings, Code2, Zap, Database, Box, FileText, GitBranch, Lock, Key } from "lucide-react";
 import {
   Sidebar,
   SidebarContent,
@@ -67,6 +67,29 @@ const developerItems = [
   },
 ];
 
+const zeroTrustItems = [
+  {
+    title: "Access Applications",
+    url: "/access-applications",
+    icon: Lock,
+  },
+  {
+    title: "Access Policies",
+    url: "/access-policies",
+    icon: Shield,
+  },
+  {
+    title: "Service Credentials",
+    url: "/service-credentials",
+    icon: Key,
+  },
+  {
+    title: "Access Settings",
+    url: "/access-settings",
+    icon: Settings,
+  },
+];
+
 const settingsItems = [
   {
     title: "Environment Variables",
@@ -118,6 +141,24 @@ export function AppSidebar() {
           <SidebarGroupContent>
             <SidebarMenu>
               {developerItems.map((item) => (
+                <SidebarMenuItem key={item.title}>
+                  <SidebarMenuButton asChild>
+                    <a href={item.url} data-testid={`link-${item.title.toLowerCase()}`}>
+                      <item.icon className="h-4 w-4" />
+                      <span>{item.title}</span>
+                    </a>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+              ))}
+            </SidebarMenu>
+          </SidebarGroupContent>
+        </SidebarGroup>
+
+        <SidebarGroup>
+          <SidebarGroupLabel>Zero Trust</SidebarGroupLabel>
+          <SidebarGroupContent>
+            <SidebarMenu>
+              {zeroTrustItems.map((item) => (
                 <SidebarMenuItem key={item.title}>
                   <SidebarMenuButton asChild>
                     <a href={item.url} data-testid={`link-${item.title.toLowerCase()}`}>
