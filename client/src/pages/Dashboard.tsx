@@ -2,7 +2,7 @@ import { useState } from "react";
 import { Activity, Globe, Shield, Zap, Plus } from "lucide-react";
 import { MetricCard } from "@/components/MetricCard";
 import { DomainCard } from "@/components/DomainCard";
-import { AnalyticsChart } from "@/components/AnalyticsChart";
+import { ChartCarousel } from "@/components/ChartCarousel";
 import { Button } from "@/components/ui/button";
 import { APITokenDialog } from "@/components/APITokenDialog";
 
@@ -38,13 +38,91 @@ const mockDomains = [
   },
 ];
 
-const mockChartData = [
-  { time: "00:00", requests: 1200 },
-  { time: "04:00", requests: 800 },
-  { time: "08:00", requests: 2400 },
-  { time: "12:00", requests: 3200 },
-  { time: "16:00", requests: 2800 },
-  { time: "20:00", requests: 1600 },
+const chartData = [
+  {
+    title: "Request Traffic (24h)",
+    data: [
+      { time: "00:00", requests: 1200 },
+      { time: "04:00", requests: 800 },
+      { time: "08:00", requests: 2400 },
+      { time: "12:00", requests: 3200 },
+      { time: "16:00", requests: 2800 },
+      { time: "20:00", requests: 1600 },
+    ],
+    type: "area" as const,
+    dataKey: "requests",
+    color: "hsl(var(--primary))",
+  },
+  {
+    title: "Threats Blocked",
+    data: [
+      { time: "00:00", threats: 45 },
+      { time: "04:00", threats: 32 },
+      { time: "08:00", threats: 89 },
+      { time: "12:00", threats: 124 },
+      { time: "16:00", threats: 98 },
+      { time: "20:00", threats: 52 },
+    ],
+    type: "bar" as const,
+    dataKey: "threats",
+    color: "hsl(var(--destructive))",
+  },
+  {
+    title: "Bandwidth Saved (GB)",
+    data: [
+      { time: "00:00", bandwidth: 2.3 },
+      { time: "04:00", bandwidth: 1.8 },
+      { time: "08:00", bandwidth: 4.2 },
+      { time: "12:00", bandwidth: 5.6 },
+      { time: "16:00", bandwidth: 4.9 },
+      { time: "20:00", bandwidth: 2.8 },
+    ],
+    type: "area" as const,
+    dataKey: "bandwidth",
+    color: "hsl(var(--success))",
+  },
+  {
+    title: "API Latency (ms)",
+    data: [
+      { time: "00:00", latency: 145 },
+      { time: "04:00", latency: 132 },
+      { time: "08:00", latency: 198 },
+      { time: "12:00", latency: 245 },
+      { time: "16:00", latency: 198 },
+      { time: "20:00", latency: 152 },
+    ],
+    type: "line" as const,
+    dataKey: "latency",
+    color: "hsl(var(--secondary-blue))",
+  },
+  {
+    title: "Worker Executions",
+    data: [
+      { time: "00:00", executions: 5200 },
+      { time: "04:00", executions: 3100 },
+      { time: "08:00", executions: 8900 },
+      { time: "12:00", executions: 12400 },
+      { time: "16:00", executions: 9800 },
+      { time: "20:00", executions: 6200 },
+    ],
+    type: "bar" as const,
+    dataKey: "executions",
+    color: "hsl(var(--chart-2))",
+  },
+  {
+    title: "Cache Hit Ratio (%)",
+    data: [
+      { time: "00:00", hitRatio: 78 },
+      { time: "04:00", hitRatio: 82 },
+      { time: "08:00", hitRatio: 65 },
+      { time: "12:00", hitRatio: 72 },
+      { time: "16:00", hitRatio: 75 },
+      { time: "20:00", hitRatio: 80 },
+    ],
+    type: "line" as const,
+    dataKey: "hitRatio",
+    color: "hsl(var(--chart-3))",
+  },
 ];
 
 export default function Dashboard() {
@@ -61,7 +139,7 @@ export default function Dashboard() {
     return (
       <div className="flex items-center justify-center min-h-screen p-4">
         <div className="max-w-md w-full space-y-6 text-center">
-          <div className="h-16 w-16 rounded-full bg-primary/10 flex items-center justify-center mx-auto">
+          <div className="h-16 w-16 rounded-full bg-primary/10 flex items-center justify-center mx-auto shadow-lg">
             <Shield className="h-8 w-8 text-primary" />
           </div>
           <div className="space-y-2">
@@ -85,10 +163,12 @@ export default function Dashboard() {
   }
 
   return (
-    <div className="space-y-6 p-6">
+    <div className="space-y-8 p-6">
       <div>
-        <h1 className="text-3xl font-bold" data-testid="text-page-title">Overview</h1>
-        <p className="text-muted-foreground mt-1">
+        <h1 className="text-3xl font-bold tracking-tight" data-testid="text-page-title">
+          Overview
+        </h1>
+        <p className="text-muted-foreground mt-2">
           Monitor your Cloudflare account and domain statistics
         </p>
       </div>
@@ -115,10 +195,14 @@ export default function Dashboard() {
         />
       </div>
 
-      <AnalyticsChart title="Request Traffic (24h)" data={mockChartData} />
+      <div className="space-y-2">
+        <h2 className="text-lg font-semibold px-0.5">Analytics Dashboard</h2>
+        <p className="text-sm text-muted-foreground px-0.5">Hover to navigate through different metrics</p>
+        <ChartCarousel charts={chartData} />
+      </div>
 
-      <div>
-        <h2 className="text-xl font-semibold mb-4">Your Domains</h2>
+      <div className="space-y-4">
+        <h2 className="text-lg font-semibold">Your Domains</h2>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
           {mockDomains.map((domain) => (
             <DomainCard key={domain.domain} {...domain} />
