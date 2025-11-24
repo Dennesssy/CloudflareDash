@@ -21,6 +21,10 @@ import AccessApplications from "@/pages/AccessApplications";
 import AccessPolicies from "@/pages/AccessPolicies";
 import ServiceCredentials from "@/pages/ServiceCredentials";
 import AccessSettings from "@/pages/AccessSettings";
+import AIModels from "@/pages/AIModels";
+import AIFinetunes from "@/pages/AIFinetunes";
+import AIGateway from "@/pages/AIGateway";
+import Vectorize from "@/pages/Vectorize";
 import Settings from "@/pages/Settings";
 import NotFound from "@/pages/not-found";
 
@@ -41,6 +45,10 @@ function Router() {
       <Route path="/access-policies" component={AccessPolicies} />
       <Route path="/service-credentials" component={ServiceCredentials} />
       <Route path="/access-settings" component={AccessSettings} />
+      <Route path="/ai-models" component={AIModels} />
+      <Route path="/ai-finetunes" component={AIFinetunes} />
+      <Route path="/ai-gateway" component={AIGateway} />
+      <Route path="/vectorize" component={Vectorize} />
       <Route path="/settings" component={Settings} />
       <Route component={NotFound} />
     </Switch>

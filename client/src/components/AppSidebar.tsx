@@ -1,4 +1,4 @@
-import { LayoutDashboard, Globe, Shield, BarChart3, Settings, Code2, Zap, Database, Box, FileText, GitBranch, Lock, Key } from "lucide-react";
+import { LayoutDashboard, Globe, Shield, BarChart3, Settings, Code2, Zap, Database, Box, FileText, GitBranch, Lock, Key, Brain, Network } from "lucide-react";
 import {
   Sidebar,
   SidebarContent,
@@ -64,6 +64,26 @@ const developerItems = [
     title: "Deployments",
     url: "/deployments",
     icon: GitBranch,
+  },
+  {
+    title: "AI Models",
+    url: "/ai-models",
+    icon: Brain,
+  },
+  {
+    title: "AI Finetunes",
+    url: "/ai-finetunes",
+    icon: Brain,
+  },
+  {
+    title: "AI Gateway",
+    url: "/ai-gateway",
+    icon: Network,
+  },
+  {
+    title: "Vectorize",
+    url: "/vectorize",
+    icon: Database,
   },
 ];
 
