@@ -36,6 +36,8 @@
   --accent-foreground: 0 0% 11%;
   --destructive: 0 84% 60%;
   --destructive-foreground: 0 0% 100%;
+  --secondary-blue: 213 94% 38%;
+  --success: 142 76% 36%;
   --input: 0 0% 82%;
   --ring: 23 95% 54%;
   --chart-1: 213 94% 38%;
@@ -120,6 +122,8 @@
   --accent-foreground: 0 0% 96%;
   --destructive: 0 84% 60%;
   --destructive-foreground: 0 0% 100%;
+  --secondary-blue: 213 94% 68%;
+  --success: 142 76% 66%;
   --input: 0 0% 28%;
   --ring: 23 95% 54%;
   --chart-1: 213 94% 68%;
