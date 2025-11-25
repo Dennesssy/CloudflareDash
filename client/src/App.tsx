@@ -7,6 +7,7 @@ import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { AppSidebar } from "@/components/AppSidebar";
 import { ThemeProvider } from "@/components/ThemeProvider";
 import { ThemeToggle } from "@/components/ThemeToggle";
+import { Footer } from "@/components/Footer";
 import Dashboard from "@/pages/Dashboard";
 import DNSManagement from "@/pages/DNSManagement";
 import Analytics from "@/pages/Analytics";
@@ -76,6 +77,7 @@ export default function App() {
                 <main className="flex-1 overflow-auto">
                   <Router />
                 </main>
+                <Footer />
               </div>
             </div>
           </SidebarProvider>
